@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": true,
+    "module": "es2022",
+    "target": "es6",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "paths": {
+      "@database/*": ["./src/database/*"],
+      "@model/*": ["./src/model/*"],
+      "@service/*": ["./src/service/*"],
+    },
+  },
+  "files": ["src/index.ts"],
+}

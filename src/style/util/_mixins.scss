@@ -1,0 +1,23 @@
+@mixin font($family, $size, $weight: normal, $line-height: $line-height-base, $letter-spacing: $letter-spacing-normal) {
+    font-family: $family;
+    font-size: $size;
+    font-weight: $weight;
+    line-height: $line-height;
+    letter-spacing: $letter-spacing;
+}
+
+@mixin button($bg-color, $text-color, $padding: 0.1rem, $border-radius: 0.5rem, $width: 2.8rem, $height: 2.8rem) {
+    background-color: $bg-color;
+    color: $text-color;
+    padding: $padding;
+    border-radius: $border-radius;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    height: $height;
+    width: $width;
+
+    &:hover {
+        background-color: darken($bg-color, 10%);
+    }
+}

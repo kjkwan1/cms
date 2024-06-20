@@ -1,0 +1,33 @@
+@import './variables';
+@import './util/mixins';
+
+h1, .heading-primary {
+    @include font($font-family-primary, $font-size-large, bold, $line-height-heading, $letter-spacing-tight);
+    color: $color-text;
+}
+
+h2, .heading-secondary {
+    @include font($font-family-primary, $font-size-medium, bold, $line-height-heading, $letter-spacing-tight);
+    color: $color-text;
+}
+
+p, .text-normal {
+    @include font($font-family-secondary, $font-size-base);
+    color: $color-text-light;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.text-large {
+    font-size: $font-size-large;
+}
+
+.text-medium {
+    font-size: $font-size-medium;
+}
+
+.text-small {
+    font-size: $font-size-small;
+}

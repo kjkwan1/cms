@@ -1,0 +1,42 @@
+@import './components/components';
+@import './variables';
+@import './util/mixins';
+
+#app {
+    width: 100%;
+    height: 100vh;
+    background-color: $color-background;
+    font-family: $font-family-primary;
+    overflow: hidden;
+    position: relative;
+    padding-bottom: $footer-height;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    font-size: $font-size-base;
+}
+
+html {
+    box-sizing: border-box;
+    font-size: 62.5%;
+    scroll-behavior: smooth;
+    height: 100%;
+    max-width: 100%;
+}
+
+body {
+    height: 100%;
+    margin: 0 auto;
+    scrollbar-width: none;
+    font-family: $font-family-secondary;
+    position: relative;
+    color: $color-text;
+}
