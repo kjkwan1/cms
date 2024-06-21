@@ -12,7 +12,6 @@ self.onmessage = async (event) => {
     try {
         cursor = await store.openCursor();
     } catch (e) {
-        self.postMessage({ type: 'error' });
         return;
     }
 
@@ -48,5 +47,5 @@ self.onmessage = async (event) => {
         });
     }
 
-    self.postMessage({ type: 'results', results });
+    self.postMessage({ type: 'autocomplete', result: results });
 };

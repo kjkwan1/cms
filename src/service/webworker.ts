@@ -1,7 +1,7 @@
-import { Chunk, Context, Effect, Layer, PubSub, Ref, Scope } from "effect";
-import { CSVCustomer, Customer } from "../model/customer";
+import { Chunk, Context, Deferred, Effect, Fiber, Layer, Queue, Ref, Scope, Stream, pipe } from "effect";
+import { Customer } from "../model/customer";
 import { makeSemaphore } from "effect/Effect";
-import { EventService } from "./event";
+import { ViewService } from "./view";
 
 const autoCompleteRef = Effect.runSync(
     Ref.make(new Worker(new URL('../worker/autocomplete.js', import.meta.url), { type: 'module' }))
@@ -17,7 +17,7 @@ const dbCrudRef = Effect.runSync(
 
 const mutex = Effect.runSync(makeSemaphore(1));
 
-const terminate = Effect.runSync(PubSub.unbounded());
+const terminate = Effect.runSync(Deferred.make<undefined>());
 
 const accumulated: Chunk.Chunk<Customer> = Chunk.empty();
 
@@ -27,6 +27,11 @@ export class WebworkerService extends Context.Tag('WebworkerService')<
         readonly initAutocomplete: () => Effect.Effect<void, Error, Scope.Scope>;
         readonly initAccumulate: () => Effect.Effect<void, Error, Scope.Scope>;
         readonly initDbCrud: () => Effect.Effect<void, Error, Scope.Scope>;
+        readonly receive: <T>(
+            workerRef: Ref.Ref<Worker>,
+            queue: Queue.Queue<T>,
+            sigTerm: Deferred.Deferred<undefined>
+        ) => Effect.Effect<void, Error, Scope.Scope>;
         readonly terminate: () => Effect.Effect<void>;
     }
 >() {};
@@ -44,18 +49,18 @@ export const WebworkerServiceLive = Layer.succeed(
                 Effect.gen(function* () {
                     const query = (event.target as any).value;
                     if (query) {
-                        const task = mutex.withPermits(1)(autoCompleteRef.get);
-
+                        const worker = yield* autoCompleteRef.get;
+                        yield* mutex.withPermits(1)(Effect.succeed( worker.postMessage({ query, maxSuggestions: 100 })));
                     }
                 })
-            ), 300)
+            ), 300);
             search.addEventListener('input', handler);
 
-            yield* Effect.addFinalizer((exit) => {
+            yield* Effect.addFinalizer(() => {
                 search.removeEventListener('input', handler);
                 return Effect.succeed(undefined);
             });
-            yield* terminate.subscribe;
+            yield* Deferred.await(terminate);
             yield* Effect.never;
         }),
         initAccumulate: () => Effect.gen(function* () {
@@ -64,20 +69,71 @@ export const WebworkerServiceLive = Layer.succeed(
                 return Effect.fail(new Error('Input component not found'));
             }
 
-            const handler = () => {};
+            const handler = (event: Event) => Effect.runSync(
+                Effect.gen(function* () {
+                    const query = (event.target as any).value;
+                    if (query) {
+                        const worker = yield* accumulateRef.get;
+                        yield* mutex.withPermits(1)(Effect.succeed(() => {
+                            worker.postMessage({ query, maxSuggestions: 100 });
+                        }));
+                    }   
+                })
+            );
             search.addEventListener('keydown', handler);
-            yield* terminate.subscribe;
+
+            yield* Effect.addFinalizer(() => {
+                search.removeEventListener('keydown', handler);
+                return Effect.succeed(undefined);
+            });
+            yield* Deferred.await(terminate);
             yield* Effect.never;
         }),
         initDbCrud: () => Effect.gen(function* () {
-            yield* terminate.subscribe;
+            const handler = (event: Event) => Effect.runSync(
+                Effect.gen(function* () {
+                    const query = (event.target as any).value;
+                    if (query) {
+                        const worker = yield* dbCrudRef.get;
+                        yield* mutex.withPermits(1)(Effect.succeed(worker.postMessage({ query, maxSuggestions: 100 })));
+                    }
+                })
+            );
+            document.addEventListener('dbQuery', handler);
+
+            yield* Effect.addFinalizer(() => {
+                document.removeEventListener('dbQuery', handler);
+                return Effect.succeed(undefined);
+            });
+            yield* Deferred.await(terminate);
+            yield* Effect.never;
+        }),
+        receive: <T>(
+            workerRef: Ref.Ref<Worker>,
+            queue: Queue.Queue<T>,
+            sigTerm: Deferred.Deferred<undefined>
+        ) => Effect.gen(function* () {
+            const worker = yield* workerRef.get;
+
+            const handler = (message: any) => Effect.runSync(Effect.gen(function* () {
+                yield* queue.offer(message.data);
+            }))
+
+            worker.addEventListener('message', handler);
+
+            yield* Effect.addFinalizer(() => {
+                worker.removeEventListener('input', handler);
+                return Effect.succeed(undefined);
+            });
+
+            yield* Deferred.await(sigTerm);
             yield* Effect.never;
         }),
         terminate: () => Effect.gen(function* () {
-            yield* Effect.never;
+            yield* Deferred.complete(terminate, undefined);
         }),
     })
-)
+);
 
 function debounce(func: any, wait: number) {
     let timeout: any;
@@ -88,79 +144,92 @@ function debounce(func: any, wait: number) {
     };
 }
 
-// export class WebworkerService {
-//     private static instance: WebworkerService;
-//     private workerCount = navigator.hardwareConcurrency || 4;
-//     private chunkSize = 500;
-//     private workers: Worker[] = [];
-//     private queue: CSVCustomer[][] = [];
+export const initialize = () => Effect.scoped(
+    Effect.gen(function* () {
+        const service = yield* WebworkerService;
+        
+        const autoCompleteEventFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(service.initAutocomplete());
+        const accumulateEventFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(service.initAccumulate());
+        const crudEventFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(service.initDbCrud());
 
-//     private _onInitialized: Promise<void>;
-//     private resolve: (val: unknown) => void;
-//     private reported = 0;
+        const autoCompleteReceiver: Queue.Queue<AutoCompleteResponse> = yield* Queue.bounded<AutoCompleteResponse>(100);
+        const autoCompleteTerminate = yield* Deferred.make<undefined>();
 
-//     constructor() {
-//         this.initWorkers();
-//         this._onInitialized = new Promise((resolve) => {
-//             this.resolve = resolve;
-//         });
-//     }
+        const accumulateReceiver: Queue.Queue<Customer[]> = yield* Queue.bounded<Customer[]>(1000);
+        const accumulateTerminate = yield* Deferred.make<undefined>();
 
-//     get onInitialized() {
-//         return this._onInitialized;
-//     }
+        const autoCompleteFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(
+            service.receive(autoCompleteRef, autoCompleteReceiver, autoCompleteTerminate)
+        );
+        const accumulateFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(
+            service.receive(accumulateRef, accumulateReceiver, accumulateTerminate)
+        )
 
-//     public static getInstance(): WebworkerService {
-//         if (!this.instance) {
-//             this.instance = new WebworkerService();
-//         }
-//         return this.instance;
-//     }
+        const autoCompleteUiFiber: Fiber.RuntimeFiber<void, Error> = yield* Effect.fork(autoCompleteTest(autoCompleteReceiver));
 
-//     public distributeTasks(customers: CSVCustomer[]) {
-//         for (let i = 0; i < customers.length; i += this.chunkSize) {
-//             this.queue.push(customers.slice(i, i + this.chunkSize));
-//         }
-//         this.assignTasks();
-//     }
+        yield* Fiber.joinAll([
+            autoCompleteEventFiber,
+            accumulateEventFiber,
+            crudEventFiber,
+            autoCompleteFiber,
+            accumulateFiber,
+            autoCompleteUiFiber
+        ]);
+        yield* Effect.never;
+    })
+)
 
-//     public terminateWorkers() {
-//         this.workers.forEach(worker => worker.terminate());
-//         this.workers = [];
-//     }
+const autoCompleteTest = (queue: Queue.Queue<AutoCompleteResponse>) => pipe(
+    Stream.fromQueue(queue),
+    Stream.map((data) => {
+        const viewService = ViewService.getInstance();
+        viewService.setDisplayedCustomers(data.result);
+    }),
+    Stream.runDrain
+)
 
-//     private initWorkers() {
-//         for (let i = 0; i < this.workerCount; i++) {
-//             const worker = new Worker(new URL('../worker/init.js', import.meta.url), { type: 'module' });
-//             worker.onmessage = this.handleMessage.bind(this, worker);
-//             worker.onerror = this.handleError.bind(this);
-//             this.workers.push(worker);
-//         }
-//     }
+type CrudRequest = ReadRequest | DeleteRequest | UpdateRequest | WriteRequest;
+type DbRequestType = 'read' | 'delete' | 'update' | 'write';
+type DbResponseType = 'autocomplete' | 'accumulate' | 'read' | 'write';
 
-//     private assignTasks() {
-//         this.workers.forEach(worker => {
-//             if (this.queue.length > 0) {
-//                 const task = this.queue.shift();
-//                 worker.postMessage({ cmd: 'process', data: task });     
-//             }
-//         });
-//     }
+interface DbResponse {
+    type: DbResponseType;
+}
 
-//     private handleMessage(worker: Worker, event: MessageEvent) {
-//         if (this.queue.length > 0) {
-//             const nextTask = this.queue.shift();
-//             worker.postMessage({ cmd: 'process', data: nextTask });
-//         } else {
-//             this.reported++;
-//             if (this.reported === this.workerCount) {
-//                 this.terminateWorkers();
-//                 this.resolve(null);
-//             }
-//         }
-//     }
+interface AutoCompleteResponse extends DbResponse {
+    type: 'autocomplete'
+    result: Customer[];
+}
 
-//     private handleError(e: ErrorEvent) {
-//         console.error('Worker error:', e.message);
-//     }
-// }
+interface DbRequest {
+    type: DbRequestType;
+}
+
+interface ReadRequest extends DbRequest {
+    type: 'read';
+    payload?: {
+        query: string;
+        by: keyof Customer;
+        where: () => boolean
+    }
+}
+
+interface DeleteRequest extends DbRequest {
+    type: 'delete'
+    payload: {
+        id: string | string[];
+    }
+}
+
+interface UpdateRequest extends DbRequest {
+    type: 'update';
+    payload: {
+        id: string;
+        updates: Partial<Customer>;
+    }
+}
+
+interface WriteRequest extends DbRequest {
+    type: 'write';
+    payload: Customer;
+}

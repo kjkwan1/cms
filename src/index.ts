@@ -1,9 +1,10 @@
 import { Database } from './database/db';
-import { WebworkerService } from './service/webworker';
+import { WebworkerServiceLive, initialize } from './service/webworker';
 import { CSVCustomer } from '@model/customer';
 import { ViewService } from './service/view';
 
 import './style/style.scss';
+import { Effect } from 'effect';
 
 const runApp = async () => {
     const database = Database.getInstance();
@@ -23,6 +24,8 @@ const runApp = async () => {
     } catch(error) {
         console.log('error: ', error);
     }
+
+    await Effect.runPromise(Effect.provide(initialize(), WebworkerServiceLive));
 }
 
 runApp();
