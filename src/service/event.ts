@@ -28,7 +28,7 @@ export class EventService extends Context.Tag('EventService')<
             ref: SubscriptionRef.SubscriptionRef<Customer[]>,
             workerRef: Ref.Ref<Worker>
         ) => Effect.Effect<void, never, Scope.Scope>;
-        readonly createEnterListener: (ref: SubscriptionRef.SubscriptionRef<Customer[]>) => Effect.Effect<void, never, Scope.Scope>;
+        readonly createEnterListener: () => Effect.Effect<void, never, Scope.Scope>;
         readonly createPageChangeListener: () => Effect.Effect<void, never, Scope.Scope>,
         readonly receiveMessage: (workerRef: Ref.Ref<Worker>, handler: (...args: any) => void) => Effect.Effect<void, never, Scope.Scope>;
         readonly terminate: () => Effect.Effect<void>;
@@ -43,7 +43,6 @@ export const EventServiceLive = Layer.succeed(
 
             const handler = debounce((event: Event) => Effect.runSync(
                 Effect.gen(function* () {
-                    console.log('posting message')
                     const query = (event.target as any).value;
                     if (!query) {
                         yield* SubscriptionRef.updateEffect(ref, () => Effect.succeed([]));
@@ -68,7 +67,7 @@ export const EventServiceLive = Layer.succeed(
             yield* terminate.subscribe;
             yield* Effect.never;
         }),
-        createEnterListener: (ref: SubscriptionRef.SubscriptionRef<Customer[]>) => Effect.gen(function* () {
+        createEnterListener: () => Effect.gen(function* () {
             const search = document.getElementById('search') as HTMLInputElement;
 
             const enterHandler = async (event: KeyboardEvent) => {
@@ -147,7 +146,7 @@ export const initializeListeners = (
         const workerRefInstance = yield* workerRef;
     
         const inputFiber: Fiber.RuntimeFiber<void, never> = yield* Effect.fork(eventService.createInputListener(autoCompleteRef, workerRefInstance));
-        const enterFiber: Fiber.RuntimeFiber<void, never> = yield* Effect.fork(eventService.createEnterListener(autoCompleteRef));
+        const enterFiber: Fiber.RuntimeFiber<void, never> = yield* Effect.fork(eventService.createEnterListener());
         const pageTransitionFiber: Fiber.RuntimeFiber<void, never> = yield* Effect.fork(eventService.createPageChangeListener());
     
         const workerMessageFiber: Fiber.RuntimeFiber<void, never> = yield* Effect.fork(

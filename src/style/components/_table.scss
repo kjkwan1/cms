@@ -9,9 +9,11 @@
     height: 100%;
     max-height: calc(100% - 7rem);
     max-width: 100%;
+    width: 100%;
     text-align: left;
     padding: 1rem 2rem;
     border: 1px solid $color-border;
+    table-layout: fixed;
 
     &__display {
         width: 100%;
@@ -27,7 +29,7 @@
             th, td {
                 background-color: $color-background;
                 padding: 0 0.8rem;
-                text-wrap: nowrap;
+                width: 20rem;
             }
         }
     }

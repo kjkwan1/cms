@@ -35,10 +35,8 @@ export class ViewService {
     }
 
     public setDisplayedCustomers(customers: Customer[]) {
-        // Clear the container
         this.container.innerHTML = '';
     
-        // Create and append the header
         const header = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const headers = ['Name', 'Email', 'Company', 'City', 'Country', 'Phone', 'Date Subscribed'];
@@ -50,7 +48,6 @@ export class ViewService {
         });
         header.appendChild(headerRow);
     
-        // Create a document fragment for body rows
         const bodyFragment = document.createDocumentFragment();
         const body = document.createElement('tbody');
     

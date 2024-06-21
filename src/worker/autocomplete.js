@@ -1,8 +1,7 @@
 import { openDB } from "idb";
 
 self.onmessage = async (event) => {
-    console.log('worker enter');
-    const { query, maxSuggestions, queryId } = event.data;
+    const { query, maxSuggestions } = event.data;
 
     const db = await openDB('dashboard', 1);
     const tx = db.transaction('customers', 'readonly');
@@ -13,14 +12,13 @@ self.onmessage = async (event) => {
     try {
         cursor = await store.openCursor();
     } catch (e) {
-        self.postMessage({ type: 'error', queryId });
+        self.postMessage({ type: 'error' });
         return;
     }
 
     while (results.length < maxSuggestions && cursor) {
         const { firstName, lastName } = cursor.value;
         if (firstName.toLowerCase().startsWith(query) || lastName.toLowerCase().startsWith(query)) {
-            console.log(`found ${cursor.value.firstName} ${cursor.value.lastName}`);
             results.push(cursor.value);
         }
 
@@ -39,7 +37,6 @@ self.onmessage = async (event) => {
     }
 
     const isUniqueFirstName = !results.some((val) => val.firstName !== first.firstName);
-    console.log('isUnique: ', isUniqueFirstName);
 
     if (isUniqueFirstName) {
         results.sort((a, b) => {
@@ -51,5 +48,5 @@ self.onmessage = async (event) => {
         });
     }
 
-    self.postMessage({ type: 'results', queryId, results });
+    self.postMessage({ type: 'results', results });
 };
