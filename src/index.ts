@@ -2,24 +2,37 @@ export * from './model/index';
 export * from './service/index';
 
 import { Database } from './database/db';
-import { CSVCustomer } from '@model/customer';
+import { Customer } from '@model/customer';
 import { ViewService } from './service/view';
 
 import './style/style.scss';
-import { Chunk, Effect, Ref } from 'effect';
-import { DataLoader, createAutoCompleteStream } from './service/index';
+import { Chunk, Deferred, Effect, Ref } from 'effect';
+import { createAutoCompleteStream, loadData } from './service/index';
 
 const runApp = async () => {
     const database = Database.getInstance();
-    const service = DataLoader.getInstance();
     const viewService = ViewService.getInstance();
 
     const result = await fetch('http://192.168.1.202:3000/data.json');
     const final = await result.json();
-
     await database.init();
-    service.distributeTasks(final as CSVCustomer[]);
-    await service.onInitialized;
+
+    if (!database.isAlreadyOpen()) {
+        const dataset = await Effect.runPromise(
+            Effect.scoped(
+                Effect.gen(function* () {
+                    const receiver = yield* Deferred.make<Chunk.Chunk<Customer>>();
+                    yield* loadData(receiver, final);
+                    const result: Chunk.Chunk<Customer> = yield* Deferred.await(receiver);
+                    return result;
+                })
+            )
+        )
+    
+        for (const customer of dataset) {
+            await database.save(customer);
+        }
+    }
 
     try {
         const customers = await database.find(1);
@@ -32,10 +45,10 @@ const runApp = async () => {
         Effect.scoped(
             Effect.gen(function* () {
                 const autoCompleteReceiver: Ref.Ref<Chunk.Chunk<string>> = yield* Ref.make(Chunk.empty<string>());
-                yield* createAutoCompleteStream(autoCompleteReceiver);
+                const shutdown = yield* Deferred.make<undefined>()
+                yield* createAutoCompleteStream(autoCompleteReceiver, shutdown);
             })
         )
-
     );
 }
 

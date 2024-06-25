@@ -2,7 +2,7 @@ import { Customer } from "@model/customer";
 
 export type CrudRequest = ReadRequest | DeleteRequest | UpdateRequest | WriteRequest;
 export type DbRequestType = 'read' | 'delete' | 'update' | 'write';
-export type DbResponseType = 'autocomplete' | 'accumulate' | 'read' | 'write' | 'clear' | 'done' | 'batch';
+export type DbResponseType = 'autocomplete' | 'accumulate' | 'read' | 'write' | 'clear' | 'done' | 'batch' | 'terminated';
 
 export interface DbResponse {
     type: DbResponseType;

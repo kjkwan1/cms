@@ -1,14 +1,16 @@
+// _typography.scss
+
 @import './variables';
 @import './util/mixins';
 
 h1, .heading-primary {
     @include font($font-family-primary, $font-size-large, bold, $line-height-heading, $letter-spacing-tight);
-    color: $color-text;
+    color: $color-primary;
 }
 
 h2, .heading-secondary {
     @include font($font-family-primary, $font-size-medium, bold, $line-height-heading, $letter-spacing-tight);
-    color: $color-text;
+    color: $color-secondary;
 }
 
 p, .text-normal {

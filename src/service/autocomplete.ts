@@ -3,23 +3,25 @@ import { QueryResponse } from "..";
 import { makeSemaphore } from "effect/Effect";
 
 export const createAutoCompleteStream = (
-    receiverChunkRef: Ref.Ref<Chunk.Chunk<string>>
+    receiverChunkRef: Ref.Ref<Chunk.Chunk<string>>,
+    shutdown: Deferred.Deferred<undefined>,
 ) => Effect.gen(function* () {
     const semaphore = yield* makeSemaphore(1);
     const withPermit = semaphore.withPermits(1);
     const worker = yield* autoCompleteRef.get;
     const search = document.getElementById('search') as HTMLInputElement;
 
-    const searchCallback = (event: Event) => Effect.runCallback(
+    const searchCallback = debounce((event: Event) => Effect.runCallback(
         Effect.gen(function* () {
             const query = (event.target as any).value;
             if (!query) {
                 return;
             }
-
-            yield* withPermit(postMessage(worker, receiverChunkRef, query));
+            yield* withPermit(
+                postMessage(worker, receiverChunkRef, query)
+            );
         })
-    )
+    ), 300);
 
     search.addEventListener('input', searchCallback);
 
@@ -27,7 +29,8 @@ export const createAutoCompleteStream = (
         search.removeEventListener('input', searchCallback);
     }));
 
-    yield* Effect.never;
+    yield* Deferred.await(shutdown);
+    yield* Effect.succeed(true);
 });
 
 const autoCompleteRef = Effect.runSync(
@@ -48,7 +51,6 @@ const postMessage = (worker: Worker, chunkRef: Ref.Ref<Chunk.Chunk<string>>, que
                         if (!result || !result.length) {
                             return state;
                         }
-
                         const appendage = Chunk.fromIterable(result);
                         const appended = Chunk.appendAll(appendage)(state);
                         console.log('appended: ', appended);

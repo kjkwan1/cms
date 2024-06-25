@@ -5,5 +5,15 @@
     height: $input-size;
     width: 100%;
     margin: 1rem auto;
+    padding: 0 1rem;
     border: 1px solid $color-border;
+    background-color: $color-background-light;
+    color: $color-text;
+    border-radius: $border-radius-base;
+    box-shadow: $box-shadow-base;
+    transition: border-color 0.3s, box-shadow 0.3s;
+
+    &:focus, &:active {
+        border-color: $color-primary;
+    }
 }

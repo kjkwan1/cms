@@ -1,12 +1,17 @@
 $font-family-primary: 'Roboto', sans-serif;
-$font-family-secondary: 'Courier New', Courier, monospace;
+$font-family-secondary: 'Helvetica Neue', sans-serif;
 
-$color-primary: #4A90E2;
-$color-secondary: #50E3C2;
-$color-background: #F5F7FA;
-$color-text: #333;
-$color-text-light: #666;
-$color-border: #DDD;
+$color-primary: #007BFF;  // Subtle blue
+$color-secondary: #6C757D;  // Muted grey
+$color-background: #1C1C1C;
+$color-background-dark: #2E2E2E;
+$color-background-light: #3C3C3C;
+$color-text: #F5F5F5;
+$color-text-light: #A6A6A6;
+$color-border: #444444;
+$color-border-light: #555555;
+
+$gradient-primary: linear-gradient(135deg, #007BFF, #2E2E2E);
 
 $font-size-base: 1.6rem;
 $font-size-large: 2.4rem;
@@ -20,8 +25,9 @@ $letter-spacing-normal: 0.01rem;
 $letter-spacing-wide: 0.05rem;
 $letter-spacing-tight: -0.01rem;
 
-$header-height: 6rem;
-
-$footer-height: 4rem;
-
+$header-height: 8rem;
+$footer-height: 7rem;
 $input-size: 3.2rem;
+
+$border-radius-base: 0.5rem;
+$box-shadow-base: 0 2px 4px rgba(0, 0, 0, 0.1);

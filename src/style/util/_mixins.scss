@@ -1,3 +1,5 @@
+@import '../variables';
+
 @mixin font($family, $size, $weight: normal, $line-height: $line-height-base, $letter-spacing: $letter-spacing-normal) {
     font-family: $family;
     font-size: $size;
@@ -6,7 +8,7 @@
     letter-spacing: $letter-spacing;
 }
 
-@mixin button($bg-color, $text-color, $padding: 0.1rem, $border-radius: 0.5rem, $width: 2.8rem, $height: 2.8rem) {
+@mixin button($bg-color, $text-color, $padding: 0.1rem, $border-radius: 0.5rem, $width: 3rem, $height: 3rem) {
     background-color: $bg-color;
     color: $text-color;
     padding: $padding;

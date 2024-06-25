@@ -1,27 +1,9 @@
-globalThis.indexedDB = globalThis.indexedDB
-    || globalThis.webkitIndexedDB
-    || globalThis.mozIndexedDB;
-
 self.onmessage = (event) => {
     if (event.data.cmd === 'process') {
-        const processed = event.data.data.map(convertToCustomer);
-        const openRequest = globalThis.indexedDB.open('dashboard', 1);
-        openRequest.onsuccess = function() {
-            const db = openRequest.result;
-            const tx = db.transaction('customers', 'readwrite');
-            const store = tx.objectStore('customers');
-
-            Promise.all(processed.map(customer => store.add(customer)))
-                .then(() => {
-                    tx.commit();
-                    self.postMessage({ status: 'success', message: 'All data processed and stored' });
-                })
-                .catch(e => {
-                    self.postMessage({ status: 'error', message: 'Failed to write to database', error: e.message });
-                });
-        };     
+        const processed = event.data.data.map(convertToCustomer).sort((a, b) => a.firstName.localeCompare(b.firstName));
+        self.postMessage(processed);
     }
-}
+};
 
 const convertToCustomer = (item) => ({
     id: item["Customer Id"] || item['Index'],

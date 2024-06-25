@@ -1,25 +1,26 @@
 @import '../variables';
 @import '../util/mixins';
 
-#footer {
-    width: 100vw;
+.footer {
     height: $footer-height;
-    background-color: rgba($color-primary, 0.95);
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 0 2rem;
-}
+    background-color: rgba($color-background, 0.8);
 
-.separator {
-    width: 100%;
-    height: 2rem;
-    position: relative;
-    z-index: 10;
-}
-
-.footer {
     &__pages {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
 
+        .page-link {
+            @include button($color-primary, white, 0.5rem, $border-radius-base);
+        }
     }
 }

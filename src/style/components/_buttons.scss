@@ -1,10 +1,6 @@
 @import '../variables';
 @import '../util/mixins';
 
-.button-primary {
-    @include button($color-primary, #fff);
-}
-
 .button-secondary {
-    @include button($color-secondary, #fff);
+    @include button($color-secondary, white, 0.5rem, $border-radius-base);
 }

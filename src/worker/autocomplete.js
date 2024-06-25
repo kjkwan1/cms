@@ -6,7 +6,6 @@ let seenCombinations = new Set();
 
 self.onmessage = async (event) => {
     const { query, maxSuggestions } = event.data;
-
     if (query !== lastQuery) {
         seenCombinations.clear();
         self.postMessage({ type: 'clear' });

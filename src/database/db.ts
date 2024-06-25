@@ -94,4 +94,8 @@ export class Database {
     public save(customer: Customer) {
         return this.idb.add('customers', customer);
     }
+
+    public isAlreadyOpen() {
+        return this.idb.objectStoreNames.contains('customers');
+    }
 }
